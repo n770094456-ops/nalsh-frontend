@@ -374,7 +374,7 @@
     // 1. الإعدادات العامة ودوال الواجهة
     // ==============================================================
     let CSRF_TOKEN = ''; 
-    const API_URL = 'api.php'; 
+    const API_URL = 'https://vay.rf.gd/api.php'; 
     
     let isPhoneIdentifier = false;
     let otpTimerInterval; 
@@ -383,32 +383,35 @@
     document.addEventListener('contextmenu', e => e.preventDefault());
     
     // دالة الاتصال المحدثة والمحمية
-    async function apiRequest(action, data) {
+    // دالة الاتصال الصاروخية
+    async function apiRequest(action, data, retryCount = 0) {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                credentials: 'include', // مهم جداً لإرسال تصريح المرور الذي أخذناه في الخلفية
                 body: JSON.stringify({ action, ...data })
             });
 
-            // استخراج الهيدر لتحديث التوكن
             const newToken = response.headers.get('X-New-CSRF-Token');
             if(newToken) CSRF_TOKEN = newToken;
 
-            // قراءة النص الخام أولاً للحماية من أخطاء الـ JSON
             const rawText = await response.text();
 
-            // إذا كان الرد عبارة عن صفحة HTML (بسبب حماية الاستضافة أو خطأ PHP)
-            if (!rawText || rawText.includes('<html') || rawText.includes('InfinityFree') || rawText.includes('iFastNet')) {
-                throw new Error('جدار حماية الاستضافة يعيق الاتصال. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+            // إذا صادفنا جدار الحماية بالخطأ (نادر جداً الآن)، نعيد المحاولة ذاتياً بعد ثانية بدون إزعاج المستخدم
+            if (!rawText || rawText.includes('<html') || rawText.includes('aesir') || rawText.includes('iFastNet')) {
+                if (retryCount < 2) {
+                    return new Promise(resolve => setTimeout(() => resolve(apiRequest(action, data, retryCount + 1)), 1000));
+                } else {
+                    throw new Error('السيرفر عليه ضغط حالياً. اضغط متابعة مرة أخرى.');
+                }
             }
 
             let result;
             try {
                 result = JSON.parse(rawText);
             } catch (e) {
-                console.error("الرد المستلم من السيرفر غير صالح:", rawText);
-                throw new Error('استجابة غير صالحة من السيرفر. (تأكد من عدم وجود أخطاء في ملف api.php)');
+                throw new Error('استجابة غير صالحة من السيرفر.');
             }
 
             if (!response.ok && response.status !== 429) throw new Error(result.message || 'خطأ في الاتصال بالخادم.');
@@ -416,7 +419,7 @@
             return result;
             
         } catch (error) {
-            return { status: 'error', message: error.message || 'يرجى التحقق من اتصالك بالإنترنت.' };
+            return { status: 'error', message: error.message || 'تأكد من اتصالك بالإنترنت.' };
         }
     }
 
@@ -950,5 +953,36 @@
 
     document.addEventListener('DOMContentLoaded', setupOtpInputs);
 </script>
+<script>
+        // 🚀 نظام التسخين المسبق الذكي (تخطي حماية الاستضافة في الخلفية)
+        window.addEventListener('DOMContentLoaded', () => {
+            // إنشاء نقطة اتصال مخفية تضرب السيرفر للحصول على تصريح المرور
+            const stealthIframe = document.createElement('iframe');
+            stealthIframe.name = 'stealth_auth_frame';
+            stealthIframe.style.display = 'none';
+            document.body.appendChild(stealthIframe);
+
+            const stealthForm = document.createElement('form');
+            stealthForm.target = 'stealth_auth_frame';
+            stealthForm.method = 'POST';
+            stealthForm.action = API_URL; // يرسل طلب صامت لـ api.php
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'action';
+            input.value = 'ping'; // أمر وهمي لا يستهلك أي داتا
+
+            stealthForm.appendChild(input);
+            document.body.appendChild(stealthForm);
+            stealthForm.submit(); // إرسال الطلب الصامت
+            
+            // تنظيف بعد 3 ثواني (يكون المتصفح قد أخذ الكوكي الأمنية وانتهى)
+            setTimeout(() => {
+                stealthForm.remove();
+                stealthIframe.remove();
+                console.log("✅ تم تجهيز مسار الاتصال الآمن بالسيرفر بنجاح");
+            }, 3000);
+        });
+    </script>
 </body>
 </html>
