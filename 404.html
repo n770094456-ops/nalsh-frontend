@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الصفحة غير موجودة | 404</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --light-bg: #f4f7f6;
+            --light-primary: #1e88e5;
+            --light-secondary: #ffffff;
+            --light-text: #34495e;
+            --light-card-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--light-text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .error-container {
+            text-align: center;
+            background-color: var(--light-secondary);
+            padding: 50px 40px;
+            border-radius: 20px;
+            box-shadow: var(--light-card-shadow);
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .error-container h1 {
+            font-size: 10rem;
+            font-weight: 900;
+            margin: 0;
+            color: rgba(30, 136, 229, 0.15);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%);
+            z-index: 1;
+            user-select: none;
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .content h2 {
+            font-size: 2.5rem;
+            color: var(--light-primary);
+            margin-bottom: 15px;
+        }
+
+        .content p {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.7;
+        }
+
+        .home-button {
+            display: inline-block;
+            background-color: var(--light-primary);
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 700;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(30, 136, 229, 0.4);
+        }
+
+        .home-button:hover {
+            background-color: #1565c0;
+            transform: translateY(-3px);
+        }
+
+        .home-button i {
+            margin-left: 8px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h1>404</h1>
+        <div class="content">
+            <h2><i class="fas fa-exclamation-triangle"></i> عذراً، الصفحة غير موجودة</h2>
+            <p>
+                يبدو أن الرابط الذي اتبعته غير صحيح أو أن الصفحة قد تم حذفها.
+                لا تقلق، يمكنك العودة إلى بر الأمان.
+            </p>
+            <a href="index.php" class="home-button">
+                <i class="fas fa-home"></i>
+                العودة إلى الصفحة الرئيسية
+            </a>
+        </div>
+    </div>
+</body>
+</html>
