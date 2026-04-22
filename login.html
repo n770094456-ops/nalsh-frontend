@@ -385,50 +385,64 @@
     // دالة الاتصال المحدثة والمحمية
     // دالة الاتصال الصاروخية
     // دالة الاتصال المحدثة والمحمية (مع تخطي حماية الاستضافة المجانية)
-    async function apiRequest(action, data, retryCount = 0) {
+    // دالة الاتصال النهائية (الذكية والآمنة)
+    async function apiRequest(action, data, isRetry = false) {
         try {
+            // الخطوة 1: التأكد من إرسال الكوكيز (مهم جداً للجلسات)
             const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'X-CSRF-TOKEN': CSRF_TOKEN 
+                },
                 body: JSON.stringify({ action, ...data }),
-                credentials: 'omit' // مهم لمنع تعارض CORS مع الاستضافة المجانية
+                credentials: 'include' // <-- التصحيح الحاسم: يجب أن تكون 'include'
             });
 
             const newToken = response.headers.get('X-New-CSRF-Token');
-            if(newToken) CSRF_TOKEN = newToken;
+            if (newToken) CSRF_TOKEN = newToken;
 
             const rawText = await response.text();
 
-            // فحص إذا ردت الاستضافة بصفحة الحماية بدلاً من JSON
-            if (!rawText || rawText.includes('<html') || rawText.includes('InfinityFree') || rawText.includes('iFastNet')) {
-                throw new Error('Firewall_Blocked');
+            // الخطوة 2: التعامل مع جدار حماية الاستضافة
+            if (!rawText || rawText.includes('<html') || rawText.includes('InfinityFree')) {
+                // إذا كنا في المحاولة الأولى، نشغل حيلة الـ iframe الذكية
+                if (!isRetry) {
+                    return new Promise((resolve) => {
+                        const iframe = document.createElement('iframe');
+                        iframe.style.display = 'none';
+                        // نرسل طلب خفيف جداً (لا يستهلك السيرفر) لحل تحدي الحماية
+                        iframe.src = API_URL + '?action=ping&t=' + Date.now();
+                        document.body.appendChild(iframe);
+                        // ننتظر 2.5 ثانية ثم نعيد المحاولة للمرة الثانية والأخيرة
+                        setTimeout(() => {
+                            iframe.remove();
+                            resolve(apiRequest(action, data, true));
+                        }, 2500);
+                    });
+                }
+                // إذا فشلت المحاولة الثانية، نعرض خطأ واضح
+                throw new Error('جدار حماية الاستضافة يرفض الاتصال. قد يكون هناك ضغط على السيرفر.');
             }
 
-            let result = JSON.parse(rawText);
-            if (!response.ok && response.status !== 429) throw new Error(result.message || 'خطأ في الاتصال بالخادم.');
+            // التأكد من أن الرد هو JSON صالح قبل تحويله
+            let result;
+            try {
+                result = JSON.parse(rawText);
+            } catch (e) {
+                console.error("الرد المستلم من السيرفر ليس JSON صالح:", rawText);
+                throw new Error('استجابة غير صالحة من السيرفر. (تأكد من عدم وجود أخطاء في ملف api.php)');
+            }
+
+            if (!response.ok) throw new Error(result.message || 'خطأ من الخادم.');
             
             return result;
             
         } catch (error) {
-            // الحيلة الذكية: إذا رفض السيرفر الطلب (Failed to fetch أو Firewall)، نفتح نافذة مخفية لحل اللغز
-            if (retryCount === 0 && (error.message === 'Firewall_Blocked' || error.message.includes('Failed to fetch'))) {
-                return new Promise((resolve) => {
-                    const iframeName = 'bypass_iframe_' + Date.now();
-                    const iframe = document.createElement('iframe');
-                    iframe.name = iframeName; 
-                    iframe.style.display = 'none';
-                    iframe.src = API_URL + '?ping=1'; // طلب خفيف جداً لا يستهلك السيرفر
-                    document.body.appendChild(iframe);
-
-                    // ننتظر 2.5 ثانية حتى يقوم المتصفح بحل تحدي الحماية ثم نعيد المحاولة
-                    setTimeout(() => { 
-                        iframe.remove(); 
-                        resolve(apiRequest(action, data, 1)); 
-                    }, 2500);
-                });
-            }
-
-            return { status: 'error', message: 'تعذر الاتصال بالسيرفر. تأكد من الإنترنت وحاول مجدداً.' };
+            // الخطوة 3: التعامل مع أخطاء الاتصال النهائية
+            console.error("API Request Failed:", error);
+            // نعطي رسالة واضحة للمستخدم
+            return { status: 'error', message: error.message || 'تعذر الاتصال بالسيرفر. تأكد من الإنترنت وحاول مجدداً.' };
         }
     }
     function switchState(stateId) {
