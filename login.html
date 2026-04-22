@@ -384,13 +384,14 @@
     
     // دالة الاتصال المحدثة والمحمية
     // دالة الاتصال الصاروخية
+    // دالة الاتصال المحدثة والمحمية (مع تخطي حماية الاستضافة المجانية)
     async function apiRequest(action, data, retryCount = 0) {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF_TOKEN },
-                credentials: 'include', // مهم جداً لإرسال تصريح المرور الذي أخذناه في الخلفية
-                body: JSON.stringify({ action, ...data })
+                body: JSON.stringify({ action, ...data }),
+                credentials: 'omit' // مهم لمنع تعارض CORS مع الاستضافة المجانية
             });
 
             const newToken = response.headers.get('X-New-CSRF-Token');
@@ -398,31 +399,38 @@
 
             const rawText = await response.text();
 
-            // إذا صادفنا جدار الحماية بالخطأ (نادر جداً الآن)، نعيد المحاولة ذاتياً بعد ثانية بدون إزعاج المستخدم
-            if (!rawText || rawText.includes('<html') || rawText.includes('aesir') || rawText.includes('iFastNet')) {
-                if (retryCount < 2) {
-                    return new Promise(resolve => setTimeout(() => resolve(apiRequest(action, data, retryCount + 1)), 1000));
-                } else {
-                    throw new Error('السيرفر عليه ضغط حالياً. اضغط متابعة مرة أخرى.');
-                }
+            // فحص إذا ردت الاستضافة بصفحة الحماية بدلاً من JSON
+            if (!rawText || rawText.includes('<html') || rawText.includes('InfinityFree') || rawText.includes('iFastNet')) {
+                throw new Error('Firewall_Blocked');
             }
 
-            let result;
-            try {
-                result = JSON.parse(rawText);
-            } catch (e) {
-                throw new Error('استجابة غير صالحة من السيرفر.');
-            }
-
+            let result = JSON.parse(rawText);
             if (!response.ok && response.status !== 429) throw new Error(result.message || 'خطأ في الاتصال بالخادم.');
             
             return result;
             
         } catch (error) {
-            return { status: 'error', message: error.message || 'تأكد من اتصالك بالإنترنت.' };
+            // الحيلة الذكية: إذا رفض السيرفر الطلب (Failed to fetch أو Firewall)، نفتح نافذة مخفية لحل اللغز
+            if (retryCount === 0 && (error.message === 'Firewall_Blocked' || error.message.includes('Failed to fetch'))) {
+                return new Promise((resolve) => {
+                    const iframeName = 'bypass_iframe_' + Date.now();
+                    const iframe = document.createElement('iframe');
+                    iframe.name = iframeName; 
+                    iframe.style.display = 'none';
+                    iframe.src = API_URL + '?ping=1'; // طلب خفيف جداً لا يستهلك السيرفر
+                    document.body.appendChild(iframe);
+
+                    // ننتظر 2.5 ثانية حتى يقوم المتصفح بحل تحدي الحماية ثم نعيد المحاولة
+                    setTimeout(() => { 
+                        iframe.remove(); 
+                        resolve(apiRequest(action, data, 1)); 
+                    }, 2500);
+                });
+            }
+
+            return { status: 'error', message: 'تعذر الاتصال بالسيرفر. تأكد من الإنترنت وحاول مجدداً.' };
         }
     }
-
     function switchState(stateId) {
         document.querySelectorAll('.state-view').forEach(el => el.classList.remove('active'));
         document.getElementById(stateId).classList.add('active');
