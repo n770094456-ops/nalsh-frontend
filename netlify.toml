@@ -1,14 +1,22 @@
-[build]
-  # هذا هو المجلد الذي يحتوي على ملفات الموقع التي سيتم نشرها
-  publish = "frontend"
-  # هذا هو المجلد الذي يجب أن تضع فيه وظائف السيرفرلس (إذا استخدمتها مستقبلاً)
-  functions = "netlify/functions"
+here[build]
+  publish = "/"
 
-# هذه القاعدة تحول أي طلب يذهب إلى /api/ إلى السيرفر الخلفي الخاص بك
-
-# هذه القاعدة تحول طلب ملف session_init.php إلى السيرفر الخلفي
+# توجيه طلبات الـ API
 [[redirects]]
-  from = "/session_init.php"
-  to = "https://vay.rf.gd/session_init.php"
+  from = "/api.php"
+  to = "https://vay.rf.gd/public_html/api.php"
   status = 200
   force = true
+
+# توجيه طلبات الجلسات
+[[redirects]]
+  from = "/session_init.php"
+  to = "https://vay.rf.gd/public_html/session_init.php"
+  status = 200
+  force = true
+
+# لجعل التوجيه (Routing) يعمل في تطبيقات الصفحة الواحدة (SPA) إذا لزم الأمر
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
