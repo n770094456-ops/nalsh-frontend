@@ -5,11 +5,6 @@
   functions = "netlify/functions"
 
 # هذه القاعدة تحول أي طلب يذهب إلى /api/ إلى السيرفر الخلفي الخاص بك
-[[redirects]]
-  from = "/api/*"
-  to = "https://vay.rf.gd/api.php/:splat"
-  status = 200
-  force = true
 
 # هذه القاعدة تحول طلب ملف session_init.php إلى السيرفر الخلفي
 [[redirects]]
